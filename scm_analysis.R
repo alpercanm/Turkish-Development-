@@ -11,7 +11,7 @@ library(readxl)
 panel_groups <- as.data.frame(read_excel(
   "Dissertation_dataset_current_prices_USD.xlsx", sheet = "panel_groups"))
 
-# Predictors requested are not in the sheet; build them from the raw columns.
+
 panel_groups$opq_pc     <- panel_groups$OPQ * 1000 / panel_groups$population  # USD p.c.
 panel_groups$gdp        <- panel_groups$GDP                                   # thousand USD
 panel_groups$sh_A       <- panel_groups$A    / panel_groups$GDP
@@ -19,15 +19,13 @@ panel_groups$sh_BCDE    <- panel_groups$BCDE / panel_groups$GDP
 panel_groups$sh_GHI     <- panel_groups$GHI  / panel_groups$GDP
 panel_groups$sh_F       <- panel_groups$F    / panel_groups$GDP
 panel_groups$phys_p1000 <- panel_groups$total_physician / panel_groups$population * 1000
-# population_density and mys_male are used as supplied.
 
-# Treated units are already aggregated in this sheet: 101 = Blob_U1, 102 = Blob_U2.
 U1 <- 101
 U2 <- 102
 
-# Donor pool: everything except the two blobs, the 6 SUTVA neighbours and 34.
+# Donor pool: everything except the two blobs, the 7 SUTVA neighbours and 34.
 excl   <- c(12, 23, 36, 56, 63, 76, 34, 79)
-donors <- sort(setdiff(unique(panel_groups$plate), c(U1, U2, excl)))   # 64 units
+donors <- sort(setdiff(unique(panel_groups$plate), c(U1, U2, excl)))   
 
 PRED  <- c("population_density", "sh_A", "sh_BCDE", "sh_GHI", "sh_F")
 YEARS <- 2000:2024
@@ -35,7 +33,7 @@ YEARS <- 2000:2024
 
 ###############################################################################
 ## MODEL 1 - Blob_U1, opq_pc, treatment 2015
-###############################################################################
+#################################################
 dp1 <- dataprep(
   foo                   = panel_groups,
   predictors            = PRED,
@@ -58,12 +56,12 @@ dp1 <- dataprep(
 s1  <- synth(data.prep.obj = dp1)
 t1  <- synth.tab(synth.res = s1, dataprep.res = dp1)
 
-t1$tab.pred                                                # (1) balance table
+t1$tab.pred                                                #  balance table
 t1$tab.loss
-w1 <- t1$tab.w[order(-t1$tab.w$w.weights), ]               # (2) donor weights
+w1 <- t1$tab.w[order(-t1$tab.w$w.weights), ]               #  donor weights
 w1[w1$w.weights >= 0.001, ]
 
-path.plot(synth.res = s1, dataprep.res = dp1,              # (3) path plot
+path.plot(synth.res = s1, dataprep.res = dp1,              # path plot
           Ylab = "OPQ per capita (USD)", Xlab = "Year", Main = "Muş, Diyarbakır, Aggrı, Bitlis, Tunceli",
           Legend = c("U1", "Synthetic Blob_U1"), Legend.position = "topleft")
 abline(v = 2015, lty = 2)
@@ -72,13 +70,13 @@ gaps.plot(synth.res = s1, dataprep.res = dp1,
           Ylab = "Gap in OPQ per capita (USD)", Xlab = "Year", Main = "Muş, Diyarbakır, Aggrı, Bitlis, Tunceli")
 abline(v = 2015, lty = 2)
 
-# 1. Calculate the outcome of the synthetic control over time
+
 synthetic_outcome1 <- dp1$Y0plot %*% s1$solution.w
 
-# 2. Calculate the gap (Treated - Synthetic)
+# (Treated - Synthetic)
 gaps1 <- dp1$Y1plot - synthetic_outcome1
 
-# 3. Combine into a neat data frame to view Year, Treated, Synthetic, and the Gap
+
 gap_table1 <- data.frame(
   Year = as.numeric(rownames(gaps1)),
   Treated = as.numeric(dp1$Y1plot),
@@ -86,7 +84,7 @@ gap_table1 <- data.frame(
   Gap = as.numeric(gaps1)
 )
 
-# Print the final table
+
 print(max(gap_table1$Gap))
 print(min(gap_table1$Gap))
 
@@ -131,13 +129,12 @@ gaps.plot(synth.res = s2, dataprep.res = dp2,
           Ylab = "Gap in OPQ per capita (USD)", Xlab = "Year")
 abline(v = 2015, lty = 2)
 
-# 1. Calculate the outcome of the synthetic control over time
 synthetic_outcome2 <- dp2$Y0plot %*% s2$solution.w
 
-# 2. Calculate the gap (Treated - Synthetic)
+# the gap (Treated - Synthetic)
 gaps2 <- dp2$Y1plot - synthetic_outcome2
 
-# 3. Combine into a neat data frame to view Year, Treated, Synthetic, and the Gap
+
 gap_table2 <- data.frame(
   Year = as.numeric(rownames(gaps2)),
   Treated = as.numeric(dp2$Y1plot),
@@ -145,16 +142,14 @@ gap_table2 <- data.frame(
   Gap = as.numeric(gaps2)
 )
 
-# Print the final table
+
 print(max(gap_table2$Gap))
 print(min(gap_table2$Gap))
 
 print(gap_table2)
 
 
-###############################################################################
-## MODEL 3 - Blob_U1, gdp, treatment 2012
-###############################################################################
+
 ###############################################################################
 ## MODEL 3 - Blob_U1, gdp, treatment 2012
 ###############################################################################
@@ -164,10 +159,10 @@ dp3 <- dataprep(
   predictors.op         = "mean",
   time.predictors.prior = 2000:2011,  
   special.predictors    = list(
-    list("gdp",        2003,      "mean"),   # FIX: was 2001
+    list("gdp",        2003,      "mean"),   
     list("gdp",        2011,      "mean"),
-    list("phys_p1000", 2002:2011, "mean"),   # FIX: was 2003:2014 (post-treatment)
-    list("mys_male",   2008:2011, "mean")),  # FIX: was 2009:2014 (post-treatment)
+    list("phys_p1000", 2002:2011, "mean"),   
+    list("mys_male",   2008:2011, "mean")),  
   dependent             = "gdp",
   unit.variable         = "plate",
   unit.names.variable   = "province",
@@ -193,13 +188,13 @@ gaps.plot(synth.res = s3, dataprep.res = dp3,
           Ylab = "Gap in GDP (thousand USD)", Xlab = "Year", Main = "Muş, Diyarbakır, Aggrı, Bitlis, Tunceli")
 abline(v = 2012, lty = 2)
 
-# 1. Calculate the outcome of the synthetic control over time
+
 synthetic_outcome3 <- dp3$Y0plot %*% s3$solution.w
 
-# 2. Calculate the gap (Treated - Synthetic)
+
 gaps3 <- dp3$Y1plot - synthetic_outcome3
 
-# 3. Combine into a neat data frame to view Year, Treated, Synthetic, and the Gap
+
 gap_table3 <- data.frame(
   Year = as.numeric(rownames(gaps3)),
   Treated = as.numeric(dp3$Y1plot),
@@ -207,7 +202,7 @@ gap_table3 <- data.frame(
   Gap = as.numeric(gaps3)
 )
 
-# Print the final table
+
 print(gap_table3)
 print(max(gap_table3$Gap))
 print(min(gap_table3$Gap))
@@ -250,13 +245,12 @@ gaps.plot(synth.res = s4, dataprep.res = dp4,
           Ylab = "Gap in GDP (thousand USD)", Xlab = "Year", Main = "Şırnak, Hakkari, Batman, Mardin, Van")
 abline(v = 2012, lty = 2)
 
-# 1. Calculate the outcome of the synthetic control over time
 synthetic_outcome4 <- dp4$Y0plot %*% s4$solution.w
 
-# 2. Calculate the gap (Treated - Synthetic)
+
 gaps4 <- dp4$Y1plot - synthetic_outcome4
 
-# 3. Combine into a neat data frame to view Year, Treated, Synthetic, and the Gap
+
 gap_table4 <- data.frame(
   Year = as.numeric(rownames(gaps4)),
   Treated = as.numeric(dp4$Y1plot),
@@ -264,7 +258,7 @@ gap_table4 <- data.frame(
   Gap = as.numeric(gaps4)
 )
 
-# Print the final table
+
 print(gap_table4)
 print(max(gap_table4$Gap))
 print(min(gap_table4$Gap))
